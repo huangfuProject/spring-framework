@@ -9,4 +9,8 @@
 	<bean id="emailService" class="com.source.xml.service.impl.EmailServiceImpl">
 		<constructor-arg ref="userService"/>
 	</bean>
+
+	<bean class="com.source.xml.aware.BeanNameAwareTest" id="awareTest"/>
+
+	<bean class="com.source.xml.ext.InstantiationTracingBeanPostProcessor"/>
 </beans>

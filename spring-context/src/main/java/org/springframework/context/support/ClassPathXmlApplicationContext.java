@@ -141,6 +141,7 @@ public class ClassPathXmlApplicationContext extends AbstractXmlApplicationContex
 		super(parent);
 		setConfigLocations(configLocations);
 		if (refresh) {
+			//整个spring的核心方法 理解了这个几乎理解了spring的70%
 			refresh();
 		}
 	}

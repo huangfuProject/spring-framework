@@ -316,10 +316,12 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	 */
 	@Override
 	public int loadBeanDefinitions(Resource resource) throws BeanDefinitionStoreException {
+		// 委托方法
 		return loadBeanDefinitions(new EncodedResource(resource));
 	}
 
 	/**
+	 * 从指定的XML文件加载bean定义。
 	 * Load bean definitions from the specified XML file.
 	 * @param encodedResource the resource descriptor for the XML file,
 	 * allowing to specify an encoding to use for parsing the file
@@ -344,6 +346,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 			if (encodedResource.getEncoding() != null) {
 				inputSource.setEncoding(encodedResource.getEncoding());
 			}
+			// 委托方法  加载bd定义
 			return doLoadBeanDefinitions(inputSource, encodedResource.getResource());
 		}
 		catch (IOException ex) {
@@ -384,6 +387,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 
 
 	/**
+	 * 实际上是从指定的XML文件加载bean定义。
 	 * Actually load bean definitions from the specified XML file.
 	 * @param inputSource the SAX InputSource to read from
 	 * @param resource the resource descriptor for the XML file
@@ -396,7 +400,9 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 			throws BeanDefinitionStoreException {
 
 		try {
+			// 获取 xml 的 Document
 			Document doc = doLoadDocument(inputSource, resource);
+			// 解析 并 注册 bd
 			int count = registerBeanDefinitions(doc, resource);
 			if (logger.isDebugEnabled()) {
 				logger.debug("Loaded " + count + " bean definitions from " + resource);
@@ -502,6 +508,7 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	}
 
 	/**
+	 * 注册给定DOM文档中包含的bean定义。由{@code loadBeanDefinitions}调用。<p>创建解析器类的新实例并调用
 	 * Register the bean definitions contained in the given DOM document.
 	 * Called by {@code loadBeanDefinitions}.
 	 * <p>Creates a new instance of the parser class and invokes
@@ -515,9 +522,13 @@ public class XmlBeanDefinitionReader extends AbstractBeanDefinitionReader {
 	 * @see BeanDefinitionDocumentReader#registerBeanDefinitions
 	 */
 	public int registerBeanDefinitions(Document doc, Resource resource) throws BeanDefinitionStoreException {
+		// 创建一个文档读取器
 		BeanDefinitionDocumentReader documentReader = createBeanDefinitionDocumentReader();
+		// 获取原本已经存在的 bd 数量
 		int countBefore = getRegistry().getBeanDefinitionCount();
+		// 从文档读取并注册bd
 		documentReader.registerBeanDefinitions(doc, createReaderContext(resource));
+		// 拿解析后的bd数量 - 原有的bd数量 = 现有的bd数量
 		return getRegistry().getBeanDefinitionCount() - countBefore;
 	}
 

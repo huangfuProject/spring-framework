@@ -81,17 +81,30 @@ public abstract class AbstractXmlApplicationContext extends AbstractRefreshableC
 	@Override
 	protected void loadBeanDefinitions(DefaultListableBeanFactory beanFactory) throws BeansException, IOException {
 		// Create a new XmlBeanDefinitionReader for the given BeanFactory.
+		// 创建一个xml的读取器
 		XmlBeanDefinitionReader beanDefinitionReader = new XmlBeanDefinitionReader(beanFactory);
 
 		// Configure the bean definition reader with this context's
 		// resource loading environment.
+		// org.springframework.core.env.StandardEnvironment
+		// 设置环境信息 示例为 org.springframework.core.env.StandardEnvironment
+		// 对象。环境对象在 Spring 中用于表示当前应用程序运行的环境，包括配置属性、系统属性、环境变量等信息。
+		// StandardEnvironment 类实现了 ConfigurableEnvironment 接口
+		// 提供对系统属性和环境变量的访问和管理。通过 getProperty() 方法可以获取系统属性和环境变量的值。
+		// 提供对属性源（PropertySource）的管理。属性源用于管理应用程序中的配置属性，StandardEnvironment 中可以添加、删除和获取属性源。
+		// 提供了用于处理占位符（placeholder）的功能。在配置文件中可以使用 ${} 格式的占位符来引用属性值，StandardEnvironment 提供了解析占位符的方法。
+		// 提供了一些用于管理 profiles 的方法，例如 addActiveProfile() 和 setDefaultProfiles() 方法，用于设置和获取激活的 profiles。
 		beanDefinitionReader.setEnvironment(getEnvironment());
+		// 设置资源加载器 通过类加载器加载配置文件
 		beanDefinitionReader.setResourceLoader(this);
+		// 配置解析器  解析xml
 		beanDefinitionReader.setEntityResolver(new ResourceEntityResolver(this));
 
 		// Allow a subclass to provide custom initialization of the reader,
 		// then proceed with actually loading the bean definitions.
+		// 初始化xml读取器
 		initBeanDefinitionReader(beanDefinitionReader);
+		// 开始加载xml中定义的bean的定义 转换成bd
 		loadBeanDefinitions(beanDefinitionReader);
 	}
 
@@ -125,6 +138,7 @@ public abstract class AbstractXmlApplicationContext extends AbstractRefreshableC
 		if (configResources != null) {
 			reader.loadBeanDefinitions(configResources);
 		}
+		// 获取xml的配置文件
 		String[] configLocations = getConfigLocations();
 		if (configLocations != null) {
 			reader.loadBeanDefinitions(configLocations);

@@ -583,27 +583,33 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 
 	@Override
 	public void refresh() throws BeansException, IllegalStateException {
+		// 加锁  避免因为并发问题导致的并发安全问题
+		// 例如当出现 多线程同时初始化 ApplicationContext（比如ClassPathXmlApplicationApplication等）时， 单例bean出现重复创建的问题
 		this.startupShutdownLock.lock();
 		try {
+			// 注册当前的线程对象，将当前正在初始化容器的线程记录在变量中
 			this.startupShutdownThread = Thread.currentThread();
-
+			//该实例默认是 org.springframework.core.metrics.DefaultApplicationStartup
+			//可以用于记录容器在启动中的指标等数据 目前来看无太大的实际作用
 			StartupStep contextRefresh = this.applicationStartup.start("spring.context.refresh");
 
-			// Prepare this context for refreshing.
+			// 准备此上下文以进行刷新。
 			prepareRefresh();
 
-			// Tell the subclass to refresh the internal bean factory.
+			// 告诉子类刷新内部bean工厂。
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
-			// Prepare the bean factory for use in this context.
+			// 初始化bean工厂 向bean工厂中添加一些初始化的配置bean
 			prepareBeanFactory(beanFactory);
 
 			try {
 				// Allows post-processing of the bean factory in context subclasses.
+				// 扩展方法 允许容器在加载完初始化资源之后，实例化bean之前做一些定制化的操作
 				postProcessBeanFactory(beanFactory);
-
+				// 记录器 开始记录执行 BeanFactoryPostProcessor 的时间
 				StartupStep beanPostProcess = this.applicationStartup.start("spring.context.beans.post-process");
-				// Invoke factory processors registered as beans in the context.
+				// 调用在上下文中注册为bean的工厂处理器。
+				// 重要方法 该方法会执行 BeanFactoryPostProcessor的全部回调信息
 				invokeBeanFactoryPostProcessors(beanFactory);
 				// Register bean processors that intercept bean creation.
 				registerBeanPostProcessors(beanFactory);
@@ -650,6 +656,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 		finally {
 			this.startupShutdownThread = null;
+			//释放锁
 			this.startupShutdownLock.unlock();
 		}
 	}
@@ -660,10 +667,11 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 */
 	protected void prepareRefresh() {
 		// Switch to active.
+		// 标记容器目前处于活动状态，且记录开始时间
 		this.startupDate = System.currentTimeMillis();
 		this.closed.set(false);
 		this.active.set(true);
-
+		// 无关紧要的日志
 		if (logger.isDebugEnabled()) {
 			if (logger.isTraceEnabled()) {
 				logger.trace("Refreshing " + this);
@@ -673,10 +681,10 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			}
 		}
 
-		// Initialize any placeholder property sources in the context environment.
+		// 初始化上下文环境中的任何占位符属性源。
 		initPropertySources();
 
-		// Validate that all properties marked as required are resolvable:
+		// 验证所有标记为必需的属性都是可解析的:
 		// see ConfigurablePropertyResolver#setRequiredProperties
 		getEnvironment().validateRequiredProperties();
 
@@ -711,7 +719,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * @see #getBeanFactory()
 	 */
 	protected ConfigurableListableBeanFactory obtainFreshBeanFactory() {
+		// 开始准备刷新 不同的上下文有不同的实现
 		refreshBeanFactory();
+		// 获取一个bean 工厂
 		return getBeanFactory();
 	}
 
@@ -727,7 +737,12 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
 
 		// Configure the bean factory with context callbacks.
+		//设置 aware接口的回调处理类，它本质上是一个 BeanPostProcessor
+		// 它会在bean初始化前调用所有的aware接口的实现
 		beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
+
+		// 避免掉下面这些接口的自动装配  比如 当业务代码中使用 @Autowired 来注入 EnvironmentAware
+		// 此时是不能通过 @Autowired 注解直接将 EnvironmentAware 接口的实例注入到你的业务代码中。
 		beanFactory.ignoreDependencyInterface(EnvironmentAware.class);
 		beanFactory.ignoreDependencyInterface(EmbeddedValueResolverAware.class);
 		beanFactory.ignoreDependencyInterface(ResourceLoaderAware.class);
@@ -736,34 +751,39 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.ignoreDependencyInterface(ApplicationContextAware.class);
 		beanFactory.ignoreDependencyInterface(ApplicationStartupAware.class);
 
-		// BeanFactory interface not registered as resolvable type in a plain factory.
-		// MessageSource registered (and found for autowiring) as a bean.
+		// BeanFactory接口未在普通工厂中注册为可解析类型。
+		// MessageSource作为bean注册(并自动查找)。
 		beanFactory.registerResolvableDependency(BeanFactory.class, beanFactory);
 		beanFactory.registerResolvableDependency(ResourceLoader.class, this);
 		beanFactory.registerResolvableDependency(ApplicationEventPublisher.class, this);
 		beanFactory.registerResolvableDependency(ApplicationContext.class, this);
 
 		// Register early post-processor for detecting inner beans as ApplicationListeners.
+		// 他也是一个 BeanPostProcessor 它的目的是 将 ApplicationListener 注册到容器内 针对于事件侦听的
 		beanFactory.addBeanPostProcessor(new ApplicationListenerDetector(this));
 
-		// Detect a LoadTimeWeaver and prepare for weaving, if found.
+		// 检测LoadTimeWeaver并准备编织，如果发现的话。
 		if (!NativeDetector.inNativeImage() && beanFactory.containsBean(LOAD_TIME_WEAVER_BEAN_NAME)) {
 			beanFactory.addBeanPostProcessor(new LoadTimeWeaverAwareProcessor(beanFactory));
-			// Set a temporary ClassLoader for type matching.
+			// 为类型匹配设置一个临时ClassLoader。
 			beanFactory.setTempClassLoader(new ContextTypeMatchClassLoader(beanFactory.getBeanClassLoader()));
 		}
 
-		// Register default environment beans.
+		// 注册默认环境bean。
 		if (!beanFactory.containsLocalBean(ENVIRONMENT_BEAN_NAME)) {
+			// 注册环境工具信息
 			beanFactory.registerSingleton(ENVIRONMENT_BEAN_NAME, getEnvironment());
 		}
 		if (!beanFactory.containsLocalBean(SYSTEM_PROPERTIES_BEAN_NAME)) {
+			// 注册系统环境信息  System.properties()
 			beanFactory.registerSingleton(SYSTEM_PROPERTIES_BEAN_NAME, getEnvironment().getSystemProperties());
 		}
 		if (!beanFactory.containsLocalBean(SYSTEM_ENVIRONMENT_BEAN_NAME)) {
+			// 注册系统配置信息  System.env()
 			beanFactory.registerSingleton(SYSTEM_ENVIRONMENT_BEAN_NAME, getEnvironment().getSystemEnvironment());
 		}
 		if (!beanFactory.containsLocalBean(APPLICATION_STARTUP_BEAN_NAME)) {
+			// 注册启动侦听 ApplicationStartup
 			beanFactory.registerSingleton(APPLICATION_STARTUP_BEAN_NAME, getApplicationStartup());
 		}
 	}
