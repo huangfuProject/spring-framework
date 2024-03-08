@@ -2,6 +2,7 @@ package com.source.ann;
 
 import com.source.ann.config.AppConfig;
 import com.source.ann.service.EmailService;
+import com.source.xml.ext.BeanFactoryPostProcessorTest;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
 /**
@@ -12,7 +13,7 @@ public class AnnotationConfigApplicationContextTest {
 	public static void main(String[] args) {
 		AnnotationConfigApplicationContext context = new AnnotationConfigApplicationContext();
 		context.register(AppConfig.class);
-
+		//context.addBeanFactoryPostProcessor(new BeanFactoryPostProcessorTest());
 		context.refresh();
 		EmailService bean = context.getBean(EmailService.class);
 		bean.sendEmail("555");

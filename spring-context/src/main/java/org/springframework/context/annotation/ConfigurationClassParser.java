@@ -158,11 +158,17 @@ class ConfigurationClassParser {
 	}
 
 
+	/**
+	 * 解析这些个配置类
+	 * @param configCandidates 配置类的bd
+	 */
 	public void parse(Set<BeanDefinitionHolder> configCandidates) {
 		for (BeanDefinitionHolder holder : configCandidates) {
 			BeanDefinition bd = holder.getBeanDefinition();
 			try {
+				// 如果是通过注解标注的配置类
 				if (bd instanceof AnnotatedBeanDefinition annotatedBeanDef) {
+					// 解析注解配置类
 					parse(annotatedBeanDef, holder.getBeanName());
 				}
 				else if (bd instanceof AbstractBeanDefinition abstractBeanDef && abstractBeanDef.hasBeanClass()) {
@@ -254,7 +260,7 @@ class ConfigurationClassParser {
 			}
 		}
 
-		// Recursively process the configuration class and its superclass hierarchy.
+		// 递归地处理配置类及其超类层次结构。
 		SourceClass sourceClass = null;
 		try {
 			sourceClass = asSourceClass(configClass, filter);
@@ -285,11 +291,11 @@ class ConfigurationClassParser {
 			throws IOException {
 
 		if (configClass.getMetadata().isAnnotated(Component.class.getName())) {
-			// Recursively process any member (nested) classes first
+			// 首先递归地处理任何成员(嵌套)类
 			processMemberClasses(configClass, sourceClass, filter);
 		}
 
-		// Process any @PropertySource annotations
+		// 处理任何@PropertySource注释
 		for (AnnotationAttributes propertySource : AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), org.springframework.context.annotation.PropertySource.class,
 				PropertySources.class, true)) {
@@ -302,13 +308,12 @@ class ConfigurationClassParser {
 			}
 		}
 
-		// Search for locally declared @ComponentScan annotations first.
+		// 首先搜索本地声明的@ComponentScan注释。
 		Set<AnnotationAttributes> componentScans = AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), ComponentScan.class, ComponentScans.class,
 				MergedAnnotation::isDirectlyPresent);
 
-		// Fall back to searching for @ComponentScan meta-annotations (which indirectly
-		// includes locally declared composed annotations).
+		// 回到搜索@ComponentScan元注释(间接地包括本地声明的组合注解)。
 		if (componentScans.isEmpty()) {
 			componentScans = AnnotationConfigUtils.attributesForRepeatable(sourceClass.getMetadata(),
 					ComponentScan.class, ComponentScans.class, MergedAnnotation::isMetaPresent);
@@ -332,9 +337,9 @@ class ConfigurationClassParser {
 			}
 		}
 
-		// Process any @Import annotations
+		// 处理任何@Import注释
 		processImports(configClass, sourceClass, getImports(sourceClass), filter, true);
-
+		// 检测  ImportResource  注解
 		// Process any @ImportResource annotations
 		AnnotationAttributes importResource =
 				AnnotationConfigUtils.attributesFor(sourceClass.getMetadata(), ImportResource.class);
@@ -346,30 +351,30 @@ class ConfigurationClassParser {
 				configClass.addImportedResource(resolvedResource, readerClass);
 			}
 		}
-
+		// 检测@Bean注解
 		// Process individual @Bean methods
 		Set<MethodMetadata> beanMethods = retrieveBeanMethodMetadata(sourceClass);
 		for (MethodMetadata methodMetadata : beanMethods) {
 			configClass.addBeanMethod(new BeanMethod(methodMetadata, configClass));
 		}
 
-		// Process default methods on interfaces
+		// 处理接口上的默认方法
 		processInterfaces(configClass, sourceClass);
 
-		// Process superclass, if any
+		// 进程超类(如果有的话)
 		if (sourceClass.getMetadata().hasSuperClass()) {
 			String superclass = sourceClass.getMetadata().getSuperClassName();
 			if (superclass != null && !superclass.startsWith("java")) {
 				boolean superclassKnown = this.knownSuperclasses.containsKey(superclass);
 				this.knownSuperclasses.add(superclass, configClass);
 				if (!superclassKnown) {
-					// Superclass found, return its annotation metadata and recurse
+					// 找到超类，返回其注释元数据并递归
 					return sourceClass.getSuperClass();
 				}
 			}
 		}
 
-		// No superclass -> processing is complete
+		// 没有超类->处理完成
 		return null;
 	}
 
@@ -555,7 +560,7 @@ class ConfigurationClassParser {
 			try {
 				for (SourceClass candidate : importCandidates) {
 					if (candidate.isAssignable(ImportSelector.class)) {
-						// Candidate class is an ImportSelector -> delegate to it to determine imports
+						// 候选类是一个ImportSelector ->委托它来确定导入
 						Class<?> candidateClass = candidate.loadClass();
 						ImportSelector selector = ParserStrategyUtils.instantiateClass(candidateClass, ImportSelector.class,
 								this.environment, this.resourceLoader, this.registry);
