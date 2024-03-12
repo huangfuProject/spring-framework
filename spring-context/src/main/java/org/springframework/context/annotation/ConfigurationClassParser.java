@@ -318,13 +318,14 @@ class ConfigurationClassParser {
 			componentScans = AnnotationConfigUtils.attributesForRepeatable(sourceClass.getMetadata(),
 					ComponentScan.class, ComponentScans.class, MergedAnnotation::isMetaPresent);
 		}
-
+		// 如果配置类中存在 ComponentScan 注解
 		if (!componentScans.isEmpty()) {
+			// 循环所有的 ComponentScan 注解
 			for (AnnotationAttributes componentScan : componentScans) {
-				// The config class is annotated with @ComponentScan -> perform the scan immediately
-				Set<BeanDefinitionHolder> scannedBeanDefinitions =
-						this.componentScanParser.parse(componentScan, sourceClass.getMetadata().getClassName());
-				// Check the set of scanned definitions for any further config classes and parse recursively if needed
+				// 配置类用@ComponentScan ->注释，立即执行扫描
+				Set<BeanDefinitionHolder> scannedBeanDefinitions = this.componentScanParser.parse(componentScan, sourceClass.getMetadata().getClassName());
+				// 检查扫描的定义集以查找任何进一步的配置类，并在需要时递归地进行解析
+				// 如果 ComponentScan 注解扫描到的类中存在配置类 则进行循环递归解析
 				for (BeanDefinitionHolder holder : scannedBeanDefinitions) {
 					BeanDefinition bdCand = holder.getBeanDefinition().getOriginatingBeanDefinition();
 					if (bdCand == null) {
